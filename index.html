@@ -1,0 +1,1189 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+    <head>
+        <meta charset="UTF-8" />
+        <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+        />
+        <title>התראות פקע"ר - אישי</title>
+        <style>
+            body {
+                font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+                background-color: #f4f4f9;
+                margin: 0;
+                padding: 40px 15px 15px 15px;
+                text-align: center;
+            }
+            .controls {
+                background: white;
+                padding: 15px;
+                border-radius: 10px;
+                box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+                margin-bottom: 20px;
+                display: flex;
+                gap: 10px;
+                justify-content: center;
+                align-items: center;
+                flex-wrap: wrap;
+            }
+
+            .autocomplete-wrapper {
+                position: relative;
+                display: inline-block;
+            }
+            input[type="text"] {
+                padding: 10px;
+                border: 1px solid #bdc3c7;
+                border-radius: 5px;
+                font-size: 1em;
+                width: 200px;
+                box-sizing: border-box;
+            }
+            .autocomplete-items {
+                position: absolute;
+                border: 1px solid #d4d4d4;
+                border-bottom: none;
+                border-top: none;
+                z-index: 99;
+                top: 100%;
+                left: 0;
+                right: 0;
+                max-height: 160px;
+                overflow-y: auto;
+                background-color: white;
+                box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+                border-radius: 0 0 5px 5px;
+                text-align: right;
+            }
+            .autocomplete-items div {
+                padding: 10px;
+                cursor: pointer;
+                background-color: #fff;
+                border-bottom: 1px solid #d4d4d4;
+                font-size: 0.9em;
+            }
+            .autocomplete-items div:hover {
+                background-color: #e9e9e9;
+            }
+            .no-results {
+                padding: 10px;
+                color: #7f8c8d;
+                font-size: 0.9em;
+                background-color: #fff;
+                border-bottom: 1px solid #d4d4d4;
+            }
+
+            button {
+                padding: 10px 20px;
+                background-color: #3498db;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                font-size: 1em;
+                cursor: pointer;
+                transition: background 0.2s;
+            }
+            button:hover {
+                background-color: #2980b9;
+            }
+            .grid-container {
+                display: grid;
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+            .card {
+                background: white;
+                border-radius: 10px;
+                padding: 20px;
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+                position: relative;
+            }
+            .delete-btn {
+                position: absolute;
+                top: 10px;
+                left: 10px;
+                background: none;
+                color: #e74c3c;
+                border: none;
+                font-size: 1.5em;
+                padding: 0;
+                cursor: pointer;
+            }
+            .delete-btn:hover {
+                color: #c0392b;
+                background: none;
+            }
+            .city-name {
+                font-size: 1.2em;
+                font-weight: bold;
+                margin-bottom: 15px;
+                color: #2c3e50;
+                padding: 0 10px;
+            }
+            .status {
+                padding: 10px;
+                border-radius: 5px;
+                font-weight: bold;
+                color: white;
+                font-size: 1.1em;
+                transition: background-color 0.5s ease;
+            }
+            .status.green {
+                background-color: #27ae60;
+            }
+            .status.yellow {
+                background-color: #f1c40f;
+                color: #2c3e50;
+                animation: pulse 1.5s infinite;
+            }
+            .status.red {
+                background-color: #c0392b;
+                animation: blink 1s infinite;
+            }
+            @keyframes blink {
+                0% {
+                    opacity: 1;
+                }
+                50% {
+                    opacity: 0.6;
+                }
+                100% {
+                    opacity: 1;
+                }
+            }
+            @keyframes pulse {
+                0% {
+                    transform: scale(1);
+                }
+                50% {
+                    transform: scale(1.02);
+                }
+                100% {
+                    transform: scale(1);
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <h2>ההתראות שלי</h2>
+
+        <div class="controls">
+            <div class="autocomplete-wrapper">
+                <input
+                    type="text"
+                    id="city-input"
+                    placeholder="בחר אזור התרעה..."
+                    autocomplete="off"
+                />
+                <div id="autocomplete-list" class="autocomplete-items"></div>
+            </div>
+            <button onclick="addLocation()">הוסף אזור</button>
+        </div>
+
+        <div class="grid-container" id="alerts-container"></div>
+        <div
+            style="margin-top: 20px; font-size: 0.9em; color: #7f8c8d"
+            id="last-update-time"
+        >
+            ממתין לעדכון...
+        </div>
+
+        <script>
+            const allAvailableCities = [
+                // --- עוטף עזה, מערב הנגב והדרום ---
+                "שדרות",
+                "איבים",
+                "ניר עם",
+                "מפלסים",
+                "כפר עזה",
+                "סעד",
+                "נחל עוז",
+                "עלומים",
+                "בארי",
+                "רעים",
+                "כיסופים",
+                "עין השלושה",
+                "נירים",
+                "ניר עוז",
+                "מגן",
+                "עין הבשור",
+                "סופה",
+                "חולית",
+                "ניר יצחק",
+                "כרם שלום",
+                "פרי גן",
+                "שלומית",
+                "בני נצרים",
+                "נווה",
+                "זיקים",
+                "כרמיה",
+                "נתיב העשרה",
+                "יד מרדכי",
+                "ארז",
+                "גבים",
+                "מכללת ספיר",
+                "תקומה",
+                "יכיני",
+                "אור הנר",
+                "ברור חיל",
+                "דורות",
+                "רוחמה",
+                "נתיבות",
+                "אופקים",
+                "גבולות",
+                "צאלים",
+                "אורים",
+                "מבטחים",
+                "עמיעוז",
+                "ישע",
+                "צוחר",
+                "שדה ניצן",
+                "תלמי אליהו",
+                "אוהד",
+                "מטווח ניר עם",
+                "אזור תעשייה ספירים",
+                "חוות שקמים",
+
+                // --- קו העימות, גליל עליון, רמת הגולן והצפון ---
+                "קריית שמונה",
+                "מטולה",
+                "משגב עם",
+                "מנרה",
+                "מרגליות",
+                "כפר גלעדי",
+                "תל חי",
+                "מעיין ברוך",
+                "הגושרים",
+                "ע'ג'ר",
+                "שניר",
+                "דן",
+                "דפנה",
+                "שאר ישוב",
+                "בית הלל",
+                "שדה נחמיה",
+                "עמיר",
+                "כפר בלום",
+                "נאות מרדכי",
+                "להבות הבשן",
+                "גונן",
+                "שמיר",
+                "כפר סאלד",
+                "יפתח",
+                "רמות נפתלי",
+                "מלכיה",
+                "אביבים",
+                "יראון",
+                "ברעם",
+                "סאסא",
+                "דוב''ב",
+                "צבעון",
+                "מתת",
+                "פסוטה",
+                "אבן מנחם",
+                "נטועה",
+                "שתולה",
+                "שומרה",
+                "זרעית",
+                "ערב אל עראמשה",
+                "אדמית",
+                "יערה",
+                "חניתה",
+                "שלומי",
+                "בצת",
+                "מצובה",
+                "ראש הנקרה",
+                "לימן",
+                "גשר הזיו",
+                "סער",
+                "נהריה",
+                "עברון",
+                "שבי ציון",
+                "מזרעה",
+                "אזור תעשייה אכזיב מילואות",
+                "צפת",
+                "חצור הגלילית",
+                "ראש פינה",
+                "קצרין",
+                "מעלות תרשיחא",
+                "כפר ורדים",
+                "כרמיאל",
+                "עכו",
+                "קריית מוצקין",
+                "קריית ביאליק",
+                "קריית ים",
+                "קריית אתא",
+                "טבריה",
+                "עפולה",
+                "מגדל העמק",
+                "בית שאן",
+                "איילת השחר",
+                "חולתה",
+                "יסוד המעלה",
+                "שדה אליעזר",
+                "משמר הירדן",
+                "כפר הנשיא",
+                "טובא זנגריה",
+                "מג'דל שמס",
+                "מסעדה",
+                "בוקעאתא",
+                "עין קנייא",
+                "נווה אטי''ב",
+                "אודם",
+                "אל רום",
+                "מרום גולן",
+                "עין זיוון",
+                "קצרין - אזור תעשייה",
+                "חורפיש",
+                "אלקוש",
+                "נתיב השיירה",
+                "כברי",
+                "עבדון",
+                "מנות",
+                "נווה זיו",
+
+                // --- מרכז, שפלה ושאר הארץ (מהרשימה המקורית) ---
+                "אביחיל",
+                "גבעת חן",
+                "נתניה - מזרח",
+                "נתניה - מערב",
+                "רעננה",
+                "שושנת העמקים",
+                "אורנית",
+                "אייל",
+                "אלישמע",
+                "בית ברל",
+                "בני דרור",
+                "ג'לג'וליה",
+                "גאולים",
+                "גן חיים",
+                "גני עם",
+                "הוד השרון",
+                "חגור",
+                "חורשים",
+                "חרות",
+                "טייבה",
+                "טירה",
+                "יעבץ, יעף",
+                "ירחיב",
+                "ירקונה",
+                "כוכב יאיר - צור יגאל",
+                "כפר ברא",
+                "כפר הס",
+                "כפר מל''ל",
+                "כפר סבא",
+                "כפר עבודה",
+                "כפר קאסם",
+                "משמרת",
+                "מתן",
+                "נווה ימין",
+                "נווה ירק",
+                "ניר אליהו",
+                "נירית",
+                "עדנים",
+                "עזריאל",
+                "עין ורד",
+                "עין שריד",
+                "פורת",
+                "פרדסיה",
+                "צופית",
+                "צור יצחק",
+                "צור משה",
+                "צור נתן",
+                "קדימה צורן",
+                "קלנסווה",
+                "רמות השבים",
+                "רמת הכובש",
+                "שדה ורבורג",
+                "שדי חמד",
+                "שער אפרים",
+                "תחנת רכבת ראש העין",
+                "תל מונד",
+                "אבן יהודה",
+                "אודים",
+                "ארסוף",
+                "בית יהושע",
+                "בני ציון",
+                "בצרה",
+                "געש",
+                "חרוצים",
+                "יקום",
+                "כפר נטר",
+                "מכון וינגייט",
+                "רשפון",
+                "שפיים",
+                "תל יצחק",
+                "אזור תעשייה כפר יונה",
+                "אזור תעשייה עמק חפר",
+                "אחיטוב",
+                "אליכין",
+                "אלישיב",
+                "אמץ",
+                "בארותיים",
+                "בורגתה",
+                "בחן",
+                "בית הלוי",
+                "בית חרות",
+                "בית ינאי",
+                "בית יצחק - שער חפר",
+                "ביתן אהרן",
+                "בת חן",
+                "בת חפר",
+                "גאולי תימן",
+                "גבעת חיים איחוד",
+                "גבעת חיים מאוחד",
+                "גבעת שפירא",
+                "גן יאשיה",
+                "גנות הדר",
+                "הדר עם",
+                "המעפיל",
+                "המרכז האקדמי רופין",
+                "העוגן",
+                "זמר",
+                "חבצלת השרון וצוקי ים",
+                "חגלה",
+                "חופית",
+                "חיבת ציון",
+                "חניאל",
+                "חרב לאת",
+                "יד חנה",
+                "ינוב",
+                "כפר הרא''ה",
+                "כפר ויתקין",
+                "כפר חיים",
+                "כפר ידידיה",
+                "כפר יונה",
+                "כפר מונש",
+                "מכמורת",
+                "מסוף אורנית",
+                "מעברות",
+                "משמר השרון",
+                "נורדיה",
+                "ניצני עוז",
+                "נעורים",
+                "עולש",
+                "עין החורש",
+                "תנובות",
+                "מרכז אזורי דרום השרון",
+                "אלפי מנשה",
+                "אלקנה",
+                "עץ אפרים",
+                "צופים",
+                "שערי תקווה",
+                "סלעית",
+                "גבעת השלושה",
+                "גת רימון",
+                "כפר סירקין",
+                "מעש",
+                "פתח תקווה",
+                "אלעד",
+                "בארות יצחק",
+                "בני עטרות",
+                "גבעת כ''ח",
+                "מגשימים",
+                "מזור",
+                "נופך",
+                "נחלים",
+                "נחשונים",
+                "עינת",
+                "ראש העין",
+                "רינתיה",
+                "אזור תעשייה חבל מודיעין שוהם",
+                "בית נחמיה",
+                "בית עריף",
+                "ברקת",
+                "חדיד",
+                "טירת יהודה",
+                "כפר טרומן",
+                "שוהם",
+                "אזור תעשייה אפק ולב הארץ",
+                "איירפורט סיטי",
+                "תל אביב - דרום העיר ויפו",
+                "תל אביב - מזרח",
+                "תל אביב - מרכז העיר",
+                "תל אביב - עבר הירקון",
+                "אור יהודה",
+                "אזור",
+                "בני ברק",
+                "בת ים",
+                "גבעת שמואל",
+                "גבעתיים",
+                "הרצליה - מערב",
+                "הרצליה - מרכז וגליל ים",
+                "חולון",
+                "יהוד מונוסון",
+                "כפר שמריהו",
+                "מקווה ישראל",
+                "סביון",
+                "פארק אריאל שרון",
+                "קריית אונו",
+                "רמת גן - מזרח",
+                "רמת גן - מערב",
+                "רמת השרון",
+                "גני תקווה",
+                "בית עלמין מורשה",
+                "מתחם גלילות",
+                "מתחם פי גלילות",
+                "גיבתון",
+                "גמזו",
+                "גן שלמה",
+                "חשמונאים",
+                "כפר דניאל",
+                "כפר רות",
+                "לפיד",
+                "מבוא חורון",
+                "מבוא מודיעים",
+                "מודיעין - ליגד סנטר",
+                "מודיעין מכבים רעות",
+                "מודיעין עילית",
+                "מתתיהו",
+                "נוף איילון, שעלבים",
+                "נצר סרני",
+                "פארק תעשיות פלמחים",
+                "ראשון לציון - מזרח",
+                "ראשון לציון - מערב",
+                "רחובות",
+                "שילת",
+                "אזור תעשייה נשר - רמלה",
+                "אחיסמך",
+                "אירוס",
+                "באר יעקב",
+                "בית חנן",
+                "בית עובד",
+                "בן שמן",
+                "גאליה",
+                "גינתון",
+                "גן שורק",
+                "ישרש",
+                "כפר נוער בן שמן",
+                "לוד",
+                "מצליח",
+                "נטעים",
+                "ניר צבי",
+                "נס ציונה",
+                "עיינות",
+                "רמלה",
+                "תעשיון צריפין",
+                "אחיעזר",
+                "בית דגן",
+                "בית חשמונאי",
+                "בית עוזיאל",
+                "גזר",
+                "גני הדר",
+                "גני יוחנן",
+                "זיתן",
+                "חולדה",
+                "חמד",
+                "יגל",
+                "יד רמב''ם",
+                "יסודות",
+                "יציץ",
+                "כפר ביל''ו",
+                "כפר בן נון",
+                "כפר חב''ד",
+                "כפר שמואל",
+                "כרמי יוסף",
+                "מזכרת בתיה",
+                "משמר איילון",
+                "משמר דוד",
+                "משמר השבעה",
+                "נאות קדומים",
+                "נען",
+                "נצר חזני",
+                "סתריה",
+                "עזריה",
+                "פדיה",
+                "פתחיה",
+                "צפריה",
+                "קריית עקרון",
+                "רמות מאיר",
+                "גנות",
+                "כפר האורנים",
+                "מודיעין - ישפרו סנטר",
+                "אלון שבות",
+                "אלעזר",
+                "אפרת",
+                "ביתר עילית",
+                "בת עין",
+                "הר גילה",
+                "כפר אלדד",
+                "כפר עציון",
+                "כרמי צור",
+                "מגדל עוז",
+                "מיצד",
+                "מעלה עמוס",
+                "מעלה רחבעם",
+                "נווה דניאל",
+                "נוקדים",
+                "פארק תעשיות מגדל עוז",
+                "פני קדם",
+                "ראש צורים",
+                "שדה בר",
+                "תלם",
+                "תקוע",
+                "אדורה",
+                "אדורים",
+                'בית חג"י',
+                "הגבעה הצהובה",
+                "מעלה חבר",
+                "נגוהות",
+                "עתניאל",
+                "צומת הגוש",
+                "קרית ארבע",
+                "איבי הנחל",
+                "אפקה",
+                "בית הברכה",
+                "בר כוכבא",
+                "גבעות",
+                "היישוב היהודי חברון",
+                "חוות ארץ האיילים",
+                "חוות מדבר חבר",
+                "חוות מלאכי אברהם",
+                "חוות נחלת אבות",
+                "חוות עדן",
+                "חוות קשואלה",
+                "חוות תלם צפון",
+                'מצפה זי"ו',
+                "עוז וגאון",
+                "שדה בועז",
+                "תקוע ד' וה'",
+                "אזור תעשייה מישור אדומים",
+                "מעלה אדומים",
+                "קדר",
+                "חוות הרועה העברי",
+                "חוות צאן קדר",
+                "קדר דרום",
+                "אלון",
+                "כפר אדומים",
+                "מצפה יריחו",
+                "עלמון",
+                "מצפה חגית",
+                "נופי פרת",
+                "בני דקלים",
+                "כרמי קטיף ואמציה",
+                "נטע",
+                "שומריה",
+                "שקף",
+                "אליאב",
+                "חוות אשכולות",
+                "אביעזר",
+                "אדרת",
+                "אזור תעשייה הר טוב - צרעה",
+                "אשתאול",
+                "בית שמש",
+                "בקוע",
+                "גבעות עדן",
+                "גיזו",
+                "הראל",
+                "זנוח",
+                "טל שחר",
+                "ישעי",
+                "כפר אוריה",
+                "לטרון",
+                "מחסיה",
+                "מיני ישראל - נחשון",
+                "מסילת ציון",
+                "נווה מיכאל - רוגלית",
+                "נווה שלום",
+                "נחם",
+                "נחשון",
+                "נתיב הל''ה",
+                "צלפון",
+                "צרעה",
+                "רטורנו - גבעת שמש",
+                "תעוז",
+                "תרום",
+                "אבו גוש",
+                "בית מאיר",
+                "בר גיורא",
+                "גבעת יערים",
+                "יד השמונה",
+                "כסלון",
+                "כפר הנוער קריית יערים",
+                "מטע",
+                "נווה אילן",
+                "נטף",
+                "נס הרים",
+                "עין נקובא",
+                "עין ראפה",
+                "קריית יערים",
+                "רמת רזיאל",
+                "שואבה",
+                "שורש",
+                "אזור תעשייה ברוש",
+                "בית נקופה",
+                "הר אדר",
+                "מעלה החמישה",
+                "צובה",
+                "קריית ענבים",
+                "מבוא ביתר",
+                "צור הדסה",
+                "כפר מנחם",
+                "בית גוברין",
+                "בית ניר",
+                "גלאון",
+                "גפן",
+                "זכריה",
+                "כפר זוהרים",
+                "לוזית",
+                "נחושה",
+                "עגור",
+                "צפרירים",
+                "שדות מיכה",
+                "שריגים - לי-און",
+                "תירוש",
+                "גבעת ישעיהו",
+                "אזור תעשייה עד הלום",
+                "אשדוד - א,ב,ד,ה",
+                "אשדוד - איזור תעשייה צפוני",
+                "אשדוד - ג,ו,ז",
+                "אשדוד - ח,ט,י,יג,יד,טז",
+                "אשדוד -יא,יב,טו,יז,מרינה,סיטי",
+                "בני דרום",
+                "ניר גלים",
+                "אביגדור",
+                "אבן שמואל",
+                "אורות",
+                "אזור תעשייה באר טוביה",
+                "אזור תעשייה קריית גת",
+                "אחווה",
+                "אחוזם",
+                "איתן",
+                "אל עזי",
+                "באר טוביה",
+                "גת",
+                "ינון",
+                "כפר אחים",
+                "כפר הרי''ף וצומת ראם",
+                "כפר ורבורג",
+                "נועם",
+                "עוזה",
+                "ערוגות",
+                "קריית גת, כרמי גת",
+                "קריית מלאכי",
+                "שדה משה",
+                "שלווה",
+                "תימורים",
+                "תלמי יחיאל",
+                "אזור תעשייה כנות",
+                "ביצרון",
+                "בני עי''ש",
+                "גן הדרום",
+                "גן יבנה",
+                "חצב",
+                "חצור",
+                "כנות",
+                "נווה מבטח",
+                "תחנת רכבת קריית מלאכי - יואב",
+                "אלומה",
+                "אמונים",
+                "בית עזרא",
+                "ברכיה",
+                "גבעתי",
+                "הודיה",
+                "ורדון",
+                "זבדיאל",
+                "זוהר",
+                "זרחיה",
+                "יד נתן",
+                "כוכב מיכאל",
+                "כפר סילבר",
+                "לכיש",
+                "מנוחה",
+                "מרכז שפירא",
+                "משואות יצחק",
+                "משען",
+                "נגבה",
+                "נהורה",
+                "נוגה",
+                "נחלה",
+                "ניצן",
+                "ניצנים",
+                "ניר בנים",
+                "ניר ח''ן",
+                "ניר ישראל",
+                "סגולה",
+                "עוצם",
+                "עזר",
+                "עזריקם",
+                "עין צורים",
+                "קדמה",
+                "קוממיות",
+                "רווחה",
+                "שדה יואב",
+                "שדה עוזיהו",
+                "שחר",
+                "שפיר",
+                "שתולים",
+                "אזור תעשייה תימורים",
+                "פארק תעשייה ראם",
+                "אזור תעשייה צפוני אשקלון",
+                "אשקלון - דרום",
+                "אשקלון - צפון",
+                "באר גנים",
+                "אזור תעשייה הדרומי אשקלון",
+                "בית שקמה",
+                "בת הדר",
+                "גיאה",
+                "חלץ",
+                "מבקיעים",
+                "שדה דוד",
+                "תלמי יפה",
+                "תלמים",
+                "פלמחים",
+                "בית אלעזרי",
+                "בית חלקיה",
+                "בני ראם",
+                "גדרה",
+                "גני טל",
+                "חפץ חיים",
+                "יבנה",
+                "יד בנימין",
+                "כפר הנגיד",
+                "קדרון",
+                "רבדים",
+                "אזור תעשייה רבדים",
+                "בית גמליאל",
+                "בן זכאי",
+                "בניה",
+                "גבעת ברנר",
+                "גבעת וושינגטון",
+                "כפר אביב",
+                "כפר מרדכי",
+                "כרם ביבנה",
+                "מישר",
+                "משגב דב",
+                "מתחם בני דרום",
+                "עשרת",
+                "קבוצת יבנה",
+                "שדמה",
+                "אזור תעשייה גדרה",
+                "מעון צופיה",
+                "גבעת אלה",
+                "קריית טבעון - בית זייד",
+                "חיפה - מפרץ",
+                "חיפה - נווה שאנן ורמות כרמל",
+                "חיפה - קריית חיים ושמואל",
+                "חיפה - כרמל, הדר ועיר תחתית",
+                "חיפה - מערב",
+                "חיפה - בת גלים ק.אליעזר",
+            ];
+
+            const inputElement = document.getElementById("city-input");
+            const autocompleteList =
+                document.getElementById("autocomplete-list");
+            const uniqueCities = Array.from(new Set(allAvailableCities)).sort();
+
+            function normalizeStr(s) {
+                if (!s) return "";
+                return s
+                    .replace(/[- '""׳״]/g, "")
+                    .replace(/יי/g, "י")
+                    .replace(/וו/g, "ו");
+            }
+
+            function showSuggestions(list) {
+                autocompleteList.innerHTML = "";
+
+                if (list.length === 0) {
+                    const noResult = document.createElement("div");
+                    noResult.className = "no-results";
+                    noResult.textContent = "לא נמצא אזור תואם";
+                    autocompleteList.appendChild(noResult);
+                    return;
+                }
+
+                list.forEach((city) => {
+                    const item = document.createElement("div");
+                    item.textContent = city;
+
+                    item.addEventListener("mousedown", function (e) {
+                        e.preventDefault();
+                        inputElement.value = city;
+                        autocompleteList.innerHTML = "";
+                    });
+                    item.addEventListener("click", function () {
+                        inputElement.value = city;
+                        autocompleteList.innerHTML = "";
+                    });
+
+                    autocompleteList.appendChild(item);
+                });
+            }
+
+            inputElement.addEventListener("input", function () {
+                const val = this.value.trim();
+                if (!val) {
+                    showSuggestions(uniqueCities);
+                    return;
+                }
+                const normVal = normalizeStr(val);
+                const filtered = uniqueCities.filter((city) =>
+                    normalizeStr(city).includes(normVal),
+                );
+                showSuggestions(filtered);
+            });
+
+            inputElement.addEventListener("focus", function () {
+                const val = this.value.trim();
+                if (!val) {
+                    showSuggestions(uniqueCities);
+                } else {
+                    const normVal = normalizeStr(val);
+                    const filtered = uniqueCities.filter((city) =>
+                        normalizeStr(city).includes(normVal),
+                    );
+                    showSuggestions(filtered);
+                }
+            });
+
+            document.addEventListener("click", function (e) {
+                if (!e.target.closest(".autocomplete-wrapper")) {
+                    autocompleteList.innerHTML = "";
+                }
+            });
+
+            // --- זיכרון קשיח וניהול סטטוסים ---
+            let userLocations =
+                JSON.parse(localStorage.getItem("myAlertCities")) || [];
+            // שליפת הסטטוסים מהזיכרון הקבוע של הטלפון כדי לשרוד נעילת מסך
+            let locationStates =
+                JSON.parse(localStorage.getItem("myAlertStates")) || {};
+
+            const container = document.getElementById("alerts-container");
+
+            function getSafeId(cityName) {
+                return cityName.replace(/[^a-zA-Zא-ת0-9]/g, "");
+            }
+
+            function renderCards() {
+                container.innerHTML = "";
+
+                if (userLocations.length === 0) {
+                    container.innerHTML =
+                        '<p style="color: #7f8c8d;">לא נבחרו אזורי התרעה. אנא הוסף אזור מהרשימה למעלה.</p>';
+                    return;
+                }
+
+                const now = Date.now();
+                const tenMinutesInMs = 10 * 60 * 1000;
+
+                userLocations.forEach((loc) => {
+                    const safeId = getSafeId(loc);
+
+                    if (!locationStates[loc]) {
+                        locationStates[loc] = {
+                            status: "GREEN",
+                            timestamp: now,
+                        };
+                    }
+
+                    // בדיקת ביטחון: אם האפליקציה עלתה אחרי יותר מ-10 דקות, נאפס לירוק
+                    if (locationStates[loc].status !== "GREEN") {
+                        if (
+                            now - locationStates[loc].timestamp >
+                            tenMinutesInMs
+                        ) {
+                            locationStates[loc].status = "GREEN";
+                        }
+                    }
+
+                    let sClass =
+                        locationStates[loc].status === "RED"
+                            ? "red"
+                            : locationStates[loc].status === "YELLOW"
+                              ? "yellow"
+                              : "green";
+                    let sText =
+                        locationStates[loc].status === "RED"
+                            ? "אזעקה פעילה"
+                            : locationStates[loc].status === "YELLOW"
+                              ? "התרעה מקדימה"
+                              : "אין התראה פעילה";
+
+                    container.innerHTML += `
+                <div class="card" id="card-${safeId}">
+                    <button class="delete-btn" onclick="removeLocation('${loc}')" title="הסר אזור">&times;</button>
+                    <div class="city-name">${loc}</div>
+                    <div class="status ${sClass}" id="status-${safeId}">${sText}</div>
+                </div>
+            `;
+                });
+
+                // שמירת המצב העדכני
+                localStorage.setItem(
+                    "myAlertStates",
+                    JSON.stringify(locationStates),
+                );
+                fetchAlerts();
+            }
+
+            function addLocation() {
+                const newCity = inputElement.value.trim();
+                if (newCity === "") return;
+
+                if (!userLocations.includes(newCity)) {
+                    if (uniqueCities.includes(newCity)) {
+                        userLocations.push(newCity);
+                        localStorage.setItem(
+                            "myAlertCities",
+                            JSON.stringify(userLocations),
+                        );
+                        renderCards();
+                    } else {
+                        alert("נא לבחור אזור מתוך הרשימה המוצעת בלבד.");
+                    }
+                } else {
+                    alert("האזור הזה כבר נמצא ברשימה שלך.");
+                }
+                inputElement.value = "";
+                autocompleteList.innerHTML = "";
+            }
+
+            function removeLocation(cityToRemove) {
+                userLocations = userLocations.filter(
+                    (loc) => loc !== cityToRemove,
+                );
+                localStorage.setItem(
+                    "myAlertCities",
+                    JSON.stringify(userLocations),
+                );
+                delete locationStates[cityToRemove];
+                localStorage.setItem(
+                    "myAlertStates",
+                    JSON.stringify(locationStates),
+                );
+                renderCards();
+            }
+
+            // --- משיכת נתונים מפיקוד העורף ---
+            const API_BASE_URL =
+                "https://oref-proxy.david-unga.workers.dev";
+
+            async function fetchAlerts() {
+                if (userLocations.length === 0) return;
+
+                let fetchSuccess = false;
+                let activeAlerts = [],
+                    alertTitle = "",
+                    alertCat = "";
+                let isEarlyWarning = false,
+                    isAllClear = false;
+
+                try {
+                    const bustCacheUrl = `${API_BASE_URL}?v=${Date.now()}`;
+
+                    const response = await fetch(bustCacheUrl, {
+                        headers: {
+                            "X-Requested-With": "XMLHttpRequest",
+                            Referer: "https://www.oref.org.il/",
+                        },
+                        cache: "no-store",
+                    });
+
+                    const text = await response.text();
+                    const cleanText = text.replace(/^\uFEFF/, "").trim();
+
+                    if (cleanText === "") {
+                        fetchSuccess = true;
+                    } else if (
+                        cleanText.startsWith("{") ||
+                        cleanText.startsWith("[")
+                    ) {
+                        const data = JSON.parse(cleanText);
+                        if (data && data.data) {
+                            activeAlerts = data.data;
+                            alertTitle = data.title || "";
+                            alertCat = String(data.cat || "");
+                        }
+                        fetchSuccess = true;
+                    }
+                } catch (error) {
+                    console.error("שגיאת תקשורת:", error);
+                }
+
+                if (fetchSuccess) {
+                    isEarlyWarning =
+                        alertTitle.includes("מקדימ") ||
+                        alertTitle.includes("צפויות להתקבל") ||
+                        alertCat === "10";
+
+                    isAllClear =
+                        alertTitle.includes("שגרה") ||
+                        alertTitle.includes("שחרור") ||
+                        alertTitle.includes("לצאת");
+                }
+
+                const now = Date.now();
+                const tenMinutesInMs = 10 * 60 * 1000;
+
+                userLocations.forEach((loc) => {
+                    const safeId = getSafeId(loc);
+                    const statusDiv = document.getElementById(
+                        `status-${safeId}`,
+                    );
+                    if (!statusDiv) return;
+
+                    if (fetchSuccess) {
+                        const isAlertActiveInJson = activeAlerts.includes(loc);
+
+                        // תיקון קריטי: שחרור מבוצע *רק* אם האזור שלך ספציפית קיבל הודעת חזרה לשגרה באותו רגע
+                        if (isAllClear && isAlertActiveInJson) {
+                            locationStates[loc].status = "GREEN";
+                            locationStates[loc].timestamp = now;
+                        } else if (isAlertActiveInJson && !isAllClear) {
+                            locationStates[loc].timestamp = now;
+
+                            if (
+                                isEarlyWarning &&
+                                locationStates[loc].status !== "RED"
+                            ) {
+                                locationStates[loc].status = "YELLOW";
+                            } else if (!isEarlyWarning) {
+                                locationStates[loc].status = "RED";
+                            }
+                        }
+                    }
+
+                    if (locationStates[loc].status !== "GREEN") {
+                        const timeSinceAlert =
+                            now - locationStates[loc].timestamp;
+                        if (timeSinceAlert > tenMinutesInMs) {
+                            locationStates[loc].status = "GREEN";
+                        }
+                    }
+
+                    if (locationStates[loc].status === "YELLOW") {
+                        statusDiv.className = "status yellow";
+                        statusDiv.innerText = "התרעה מקדימה";
+                    } else if (locationStates[loc].status === "RED") {
+                        statusDiv.className = "status red";
+                        statusDiv.innerText = "אזעקה פעילה";
+                    } else {
+                        statusDiv.className = "status green";
+                        statusDiv.innerText = "אין התראה פעילה";
+                    }
+                });
+
+                // שמירת המצב לזיכרון הקשיח בכל פעימה (כדי לגבות את הטיימרים)
+                localStorage.setItem(
+                    "myAlertStates",
+                    JSON.stringify(locationStates),
+                );
+
+                const updateText = document.getElementById("last-update-time");
+                if (fetchSuccess) {
+                    updateText.innerText =
+                        "עודכן לאחרונה: " + new Date().toLocaleTimeString();
+                    updateText.style.color = "#7f8c8d";
+                } else {
+                    updateText.innerText = "שגיאת תקשורת - מנסה שוב...";
+                    updateText.style.color = "#e74c3c";
+                }
+            }
+
+            renderCards();
+            setInterval(fetchAlerts, 3000);
+        </script>
+    </body>
+</html>
